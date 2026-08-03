@@ -4,6 +4,7 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
 #include "spv-wallet.h"
+#include "signal-model.h"
 
 using namespace ns3;
 
@@ -17,14 +18,25 @@ main(int argc, char *argv[])
     uint32_t numSlots = 8;
     double simulationTime = 60.0;
 
+    // Parametres du modele de signal (desactive par defaut : meanInterval=0 => pas d'evenements)
+    double meanIntervalSeconds = 0.0;
+    double meanSinr = 10.0;
+    double sinrStdDev = 3.0;
+    double sinrThreshold = 5.0;
+
     CommandLine cmd;
     cmd.AddValue("numHonest", "Nombre de noeuds honnetes", numHonestNodes);
     cmd.AddValue("numAttackers", "Nombre de noeuds attaquants", numAttackerNodes);
     cmd.AddValue("simTime", "Duree de la simulation (s)", simulationTime);
+    cmd.AddValue("meanInterval", "Intervalle moyen entre evenements signal (s), 0=desactive", meanIntervalSeconds);
+    cmd.AddValue("meanSinr", "SINR moyen (dB)", meanSinr);
+    cmd.AddValue("sinrStdDev", "Ecart-type du SINR (dB)", sinrStdDev);
+    cmd.AddValue("sinrThreshold", "Seuil de degradation du signal (dB)", sinrThreshold);
     cmd.Parse(argc, argv);
 
     LogComponentEnable("SpvWallet", LOG_LEVEL_INFO);
     LogComponentEnable("EclipseSimWired", LOG_LEVEL_INFO);
+    LogComponentEnable("SignalModel", LOG_LEVEL_INFO);
 
     NodeContainer victimNode;
     victimNode.Create(1);
@@ -89,6 +101,16 @@ main(int argc, char *argv[])
     wallet->SetStartTime(Seconds(1.0));
     wallet->SetStopTime(Seconds(simulationTime));
 
+    // Modele de signal : actif uniquement si meanInterval > 0 (scenarios 4G)
+    Ptr<SignalModel> signalModel;
+    if (meanIntervalSeconds > 0.0)
+    {
+        signalModel = CreateObject<SignalModel>();
+        signalModel->Configure(meanIntervalSeconds, meanSinr, sinrStdDev, sinrThreshold);
+        signalModel->SetWallet(wallet);
+        Simulator::Schedule(Seconds(1.0), &SignalModel::Start, signalModel);
+    }
+
     Simulator::Stop(Seconds(simulationTime + 1.0));
     Simulator::Run();
 
@@ -98,6 +120,8 @@ main(int argc, char *argv[])
     NS_LOG_INFO("Nombre d'eclipses detectees: " << wallet->GetEclipseCount());
     NS_LOG_INFO("Taux d'occupation adverse: " << wallet->GetAdversarialOccupancyRate());
     NS_LOG_INFO("Temps en S0 (Connecte): " << wallet->GetTimeInState(S0_CONNECTED));
+    NS_LOG_INFO("Temps en S2 (Attente reconnexion): " << wallet->GetTimeInState(S2_WAITING_RECONNECT));
+    NS_LOG_INFO("Temps en S3 (Bootstrap): " << wallet->GetTimeInState(S3_BOOTSTRAP));
     NS_LOG_INFO("Temps en S4 (Eclipse): " << wallet->GetTimeInState(S4_ECLIPSED));
 
     Simulator::Destroy();
