@@ -60,6 +60,8 @@ de signal. Total : 80 simulations, duree simulee 60s chacune.
 
 ### 3.1 Occupation adverse des slots (voir `results/occupation_adverse.png`)
 
+Note : dans les graphiques `occupation_adverse.png` et `taux_eclipse.png`, les 4 courbes par scenario sont parfaitement superposees (une seule couleur visible) -- ce nest pas une erreur mais un resultat attendu : le mecanisme de monopolisation des slots ne depend que de r, pas du scenario reseau. Seule la duree dexposition (fig. fenetre_vulnerabilite.png) varie selon le scenario.
+
 Le taux d'occupation adverse croit lineairement avec r, independamment du
 scenario reseau -- resultat attendu, la logique de monopolisation des slots
 etant identique dans tous les scenarios. A r=8=K, l'occupation atteint 100%
